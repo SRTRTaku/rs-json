@@ -7,12 +7,14 @@ pub enum Token {
     WhiteSpace,
     LeftBrace,
     RightBrace,
+    LeftBracket,
+    RightBracket,
     Comma,
     Colon,
 }
 
 /// parse json string and divide it to tokens.
-pub struct Lexer<`a> {
+pub struct Lexer<'a> {
     /// point head character
     chars : std::iter::Peekable<std::str::Chars<'a>>
 }
@@ -34,14 +36,14 @@ impl LexerError {
 
 impl<'a> Lexer<'a> {
     /// take string and returen Lexer
-    pub fn new(input: &str) -> Lexe {
+    pub fn new(input: &str) -> Lexer {
         Lexer {
             chars: input.chars().peekable(),
         }
     }
 
     /// divide string to tokens
-    pub tokenize(&mut self) -> Result<Vec<Token>, LexerError> {
+    pub fn tokenize(&mut self) -> Result<Vec<Token>, LexerError> {
         let mut tokens = vec![];
         while let Some(token) = self.next_token()? {
             match token {
@@ -63,16 +65,47 @@ impl<'a> Lexer<'a> {
 
     /// take string and return matched Token
     fn next_token(&mut self) -> Result<Option<Token>, LexerError> {
-        unimplemented!()
+        match self.chars.peek() {
+            Some(c) => match c {
+                c if c.is_whitespace() || *c == '\n' => {
+                    Ok(self.next_return_token(Token::WhiteSpace))
+                }
+                '{' => Ok(self.next_return_token(Token::LeftBrace)),
+                '}' => Ok(self.next_return_token(Token::RightBrace)),
+                '[' => Ok(self.next_return_token(Token::LeftBracket)),
+                ']' => Ok(self.next_return_token(Token::RightBracket)),
+                ',' => Ok(self.next_return_token(Token::Comma)),
+                ':' => Ok(self.next_return_token(Token::Colon)),
+
+                // String
+                '"' => {
+                    self.chars.next();
+                    self.parse_string_token()
+                }
+
+                // Number
+                c if c.is_numeric() || matches!(c, '+' | '-' | '.') => self.parse_number_token(),
+
+                // Boolean
+                't' => self.parse_bool_token(true),
+                'f' => self.parse_bool_token(false),
+
+                // Null
+                'n' => self.parse_null_token(),
+
+                // error
+                _ => Err(LexerError::new(&format!("error: an unexpected char {}", c))),
+            },
+            None => Ok(None),
+        }
     }
 
-    /// parse null string
     fn parse_null_token(&mut self) -> Result<Option<Token>, LexerError> {
         unimplemented!()
     }
 
     /// parse (true|false) string
-    fn parse_bool_token(&mut self) -> Result<Option<Token>, LexerError> {
+    fn parse_bool_token(&mut self, b: bool) -> Result<Option<Token>, LexerError> {
         unimplemented!()
     }
     /// parse number string
