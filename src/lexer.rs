@@ -114,11 +114,43 @@ impl<'a> Lexer<'a> {
 
     /// parse (true|false) string
     fn parse_bool_token(&mut self, b: bool) -> Result<Option<Token>, LexerError> {
-        unimplemented!()
+        if b {
+            let s: String = (0..4).filter_map(|_| self.chars.next()).collect();
+            if s == "true" {
+                Ok(Some(Token::Bool(true)))
+            } else {
+                Err(LexerError::new(&format!(
+                    "error: a boolean true value is expected {}",
+                    s
+                )))
+            }
+        } else {
+            let s: String = (0..5).filter_map(|_| self.chars.next()).collect();
+            if s == "false" {
+                Ok(Some(Token::Bool(false)))
+            } else {
+                Err(LexerError::new(&format!(
+                    "error: a boolean false value is expected {}",
+                    s
+                )))
+            }
+        }
     }
     /// parse number string
     fn parse_number_token(&mut self) -> Result<Option<Token>, LexerError> {
-        unimplemented!()
+        let mut number_str = String::new();
+        while let Some(&c) = self.chars.peek() {
+            if c.is_numeric() | matches!(c, '+' | '-' | 'e' | 'E' | '.') {
+                self.chars.next();
+                number_str.push(c);
+            } else {
+                break;
+            }
+        }
+        match number_str.parse::<f64>() {
+            Ok(number) => Ok(Some(Token::Number(number))),
+            Err(e) => Err(LexerError::new(&format!("error: {}", e.to_string()))),
+        }
     }
     /// read string until terminal character '/"'
     fn parse_string_token(&mut self) -> Result<Option<Token>, LexerError> {
@@ -139,5 +171,43 @@ mod tests {
         let null = "null";
         let tokens = Lexer::new(null).tokenize().unwrap();
         assert_eq!(Token::Null, tokens[0]);
+    }
+    #[test]
+    fn test_bool() {
+        let b = "true";
+        let tokens = Lexer::new(b).tokenize().unwrap();
+        assert_eq!(Token::Bool(true), tokens[0]);
+        let b = "false";
+        let tokens = Lexer::new(b).tokenize().unwrap();
+        assert_eq!(Token::Bool(false), tokens[0]);
+    }
+    #[test]
+    fn test_number() {
+        //integer
+        let num = "1234567890";
+        let tokens = Lexer::new(num).tokenize().unwrap();
+        assert_eq!(tokens[0], Token::Number(1234567890f64));
+
+        let num = "+123";
+        let tokens = Lexer::new(num).tokenize().unwrap();
+        assert_eq!(tokens[0], Token::Number(123f64));
+
+        //float
+        let num = "-0.001";
+        let tokens = Lexer::new(num).tokenize().unwrap();
+        assert_eq!(tokens[0], Token::Number(-0.001));
+
+        let num = ".001";
+        let tokens = Lexer::new(num).tokenize().unwrap();
+        assert_eq!(tokens[0], Token::Number(0.001));
+
+        // exponent
+        let num = "1e-10";
+        let tokens = Lexer::new(num).tokenize().unwrap();
+        assert_eq!(tokens[0], Token::Number(0.0000000001));
+
+        let num = "+2E10";
+        let tokens = Lexer::new(num).tokenize().unwrap();
+        assert_eq!(tokens[0], Token::Number(20000000000f64));
     }
 }
