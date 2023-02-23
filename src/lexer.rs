@@ -16,7 +16,7 @@ pub enum Token {
 /// parse json string and divide it to tokens.
 pub struct Lexer<'a> {
     /// point head character
-    chars : std::iter::Peekable<std::str::Chars<'a>>
+    chars: std::iter::Peekable<std::str::Chars<'a>>,
 }
 
 /// error during lexical analysis
@@ -101,7 +101,15 @@ impl<'a> Lexer<'a> {
     }
 
     fn parse_null_token(&mut self) -> Result<Option<Token>, LexerError> {
-        unimplemented!()
+        let s: String = (0..4).filter_map(|_| self.chars.next()).collect();
+        if s == "null" {
+            Ok(Some(Token::Null))
+        } else {
+            Err(LexerError::new(&format!(
+                "error: a null value is expected {}",
+                s
+            )))
+        }
     }
 
     /// parse (true|false) string
@@ -122,3 +130,14 @@ impl<'a> Lexer<'a> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_null() {
+        let null = "null";
+        let tokens = Lexer::new(null).tokenize().unwrap();
+        assert_eq!(Token::Null, tokens[0]);
+    }
+}
