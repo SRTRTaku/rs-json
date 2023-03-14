@@ -1,5 +1,9 @@
 use std::collections::BTreeMap;
+
+use parser::ParserError;
+
 mod lexer;
+mod parser;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -24,6 +28,18 @@ impl std::ops::Index<&str> for Value {
                 .unwrap_or_else(|| panic!("A key is not found: {}", key)),
             _ => {
                 panic!("A value is not object");
+            }
+        }
+    }
+}
+
+impl std::ops::Index<usize> for Value {
+    type Output = Value;
+    fn index(&self, idx: usize) -> &Self::Output {
+        match self {
+            Value::Array(array) => &array[idx],
+            _ => {
+                panic!("A value is not array");
             }
         }
     }
