@@ -30,13 +30,64 @@ impl Parser {
 
     /// parse Object
     fn parse_object(&mut self) -> Result<Value, ParserError> {
-        todo!()
+        let token = self.peek_expect()?;
+        if *token != Token::LeftBrace {
+            return Err(ParserError::new(&format!(
+                "error: JSON object must starts {{ {:?}",
+                token
+            )));
+        }
+        // skip LeftBrace
+        self.next_expect()?;
+
+        let mut object = std::collections::BTreeMap::new();
+
+        // if RightBrace then return vacant object
+        if *self.peek_expect()? == Token::RightBrace {
+            // skip RightBrace
+            self.next_expect()?;
+            return Ok(Value::Object(object));
+        }
+
+        loop {
+            let token1 = self.next_expect()?.clone();
+            let token2 = self.next_expect()?;
+
+            match (token1, token2) {
+                (Token::String(key), Token::Colon) => {
+                    object.insert(key, self.parse()?);
+                }
+                _ => {
+                    return Err(ParserError::new(
+                        "error: a pair (key(string) and : token) is expected",
+                    ));
+                }
+            }
+
+            let token3 = self.next_expect()?;
+            match token3 {
+                Token::RightBrace => {
+                    return Ok(Value::Object(object));
+                }
+                Token::Comma => {
+                    continue;
+                }
+                _ => {
+                    return Err(ParserError::new(&format!(
+                        "error: a {{ or , token is expected {:?}",
+                        token3
+                    )));
+                }
+            }
+        }
     }
 
     pub fn parse(&mut self) -> Result<Value, ParserError> {
         let token = self.peek_expect()?.clone();
         let value = match token {
+            // {
             Token::LeftBrace => self.parse_object(),
+            // [
             Token::LeftBracket => self.parse_array(),
             Token::String(s) => {
                 self.next_expect()?;
@@ -91,7 +142,35 @@ mod test {
     use std::collections::BTreeMap;
 
     #[test]
-    fn test_parse_object() {}
+    fn test_parse_object() {
+        let json = r#"{"togatoga" : "monkey-json"}"#;
+        let value = Parser::new(Lexer::new(json).tokenize().unwrap())
+            .parse()
+            .unwrap();
+        let mut object = BTreeMap::new();
+        object.insert(
+            "togatoga".to_string(),
+            Value::String("monkey-json".to_string()),
+        );
+        assert_eq!(value, Value::Object(object));
+
+        let json = r#"
+        {
+            "key": {
+                "key": false
+            }
+        }
+        "#;
+
+        let value = Parser::new(Lexer::new(json).tokenize().unwrap())
+            .parse()
+            .unwrap();
+        let mut object = BTreeMap::new();
+        let mut nested_object = BTreeMap::new();
+        nested_object.insert("key".to_string(), Value::Bool(false));
+        object.insert("key".to_string(), Value::Object(nested_object));
+        assert_eq!(value, Value::Object(object));
+    }
 
     #[test]
     fn test_parse_array() {}
