@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
-use parser::ParserError;
+use lexer::Lexer;
+use parser::{Parser, ParserError};
 
 mod lexer;
 mod parser;
@@ -16,7 +17,10 @@ pub enum Value {
 }
 
 pub fn parse(input: &str) -> Result<Value, ParserError> {
-    todo!()
+    match Lexer::new(input).tokenize() {
+        Ok(tokens) => Parser::new(tokens).parse(),
+        Err(e) => Err(ParserError::new(&e.msg)),
+    }
 }
 
 impl std::ops::Index<&str> for Value {
