@@ -214,7 +214,6 @@ impl<'a> Lexer<'a> {
         if utf16.is_empty() {
             return Ok(());
         }
-        println!("{:?}", utf16);
         match String::from_utf16(utf16) {
             Ok(utf16_str) => {
                 result.push_str(&utf16_str);
